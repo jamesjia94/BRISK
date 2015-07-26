@@ -4,6 +4,7 @@ import argparse
 import time
 import random
 import pprint
+from Player import Player
 globald = {}
 
 class JiaBot(object):
@@ -12,6 +13,8 @@ class JiaBot(object):
     def __init__(self):
         self.layout = None
         self.game = None
+        self.state = None
+        self.otherState = None
 
     def getMapLayout(self):
         self.layout = BriskMap(self.game.get_map_layout())
@@ -25,6 +28,13 @@ class JiaBot(object):
 
     def run(self, game_num=None):
         self.game = Brisk(game_num, self.team_name)
+        if self.game.player_id == 1:
+            self.state = Player(1)
+            self.otherState = Player(2)
+        else:
+            self.state = Player(2)
+            self.otherState = Player(1)
+
         print "starting game {} we are player {}".format(self.game.game_id, self.game.player_id)
         self.getMapLayout()
         # print self.layout
@@ -42,14 +52,30 @@ class JiaBot(object):
                 else:
                     print "Hit the limit of turns and lost"
                 break
-
-            print "Turn {}".format(status['turns_taken'])
             self.executeStrategy(status)
             self.game.end_turn()
 
     def executeStrategy(self, status):
+        self.updatePlayerStates()
+        print self.state
+        print self.otherState
         lucky_territory = random.randint(0, len(status['territories']) - 1)
         self.game.place_armies(status['territories'][lucky_territory]['territory'], status['num_reserves'])
+
+    def updatePlayerStates(self):
+        state = self.game.get_game_state()
+        print "Total turns: {}".format(state["num_turns_taken"] + 1)
+        self.clearPlayerStates()
+        for territory in state["territories"]:
+            # print "territory {} is held by player {}".format(territory["territory"], territory["player"])
+            if territory["player"] == self.state.id:
+                self.state.updateTerritories(self.layout.getTerritoryByID(territory["territory"]), territory["num_armies"])
+            else:
+                self.otherState.updateTerritories(self.layout.getTerritoryByID(territory["territory"]), territory["num_armies"])
+
+    def clearPlayerStates(self):
+        self.state.clearTerritories()
+        self.otherState.clearTerritories()
 
 def main():
     parser = argparse.ArgumentParser()
