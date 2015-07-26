@@ -23,7 +23,7 @@ class BriskMap(object):
             territories = [self.getTerritoryByID(territory) for territory in jsonContinent["territories"]]
             continent.setTerritories(territories)
 
-    def __str__(self):
+    def __repr__(self):
         territories = [str(territory) for territory in self.territoriesByID.values()]
         continents = [str(continent) for continent in self.continentsByID.values()]
         return "Territories: {}. \n Continents: {}".format(territories, continents)
@@ -38,7 +38,7 @@ class Continent(object):
     def setTerritories(self, territories):
         self.territories = territories
 
-    def __str__(self):
+    def __repr__(self):
         territories = [territory.id for territory in self.territories]
         return "Continent {} is named {} with bonus {} and territories {}.".format(self.id, self.name, self.continentBonus, territories)
 
@@ -51,6 +51,6 @@ class Territory(object):
     def setAdjacentTerritories(self, adjacentTerritories):
         self.adjacentTerritories = adjacentTerritories
 
-    def __str__(self):
+    def __repr__(self):
         adjacentTerritories = [territory.id for territory in self.adjacentTerritories]
         return "Territory {} is named {} with adjacentTerritories: {}".format(self.id, self.name, adjacentTerritories)
