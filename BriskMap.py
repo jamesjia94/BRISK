@@ -4,6 +4,7 @@ class BriskMap(object):
         self.initializeTerritories(jsonMap["territories"])
         self.continentsByID = {jsonContinent["continent"]:Continent(jsonContinent) for jsonContinent in jsonMap["continents"]}
         self.initializeContinents(jsonMap["continents"])
+        self.continents = self.continentsByID.values()
 
     def getTerritoryByID(self, id):
         return self.territoriesByID[id]
@@ -23,6 +24,14 @@ class BriskMap(object):
             territories = [self.getTerritoryByID(territory) for territory in jsonContinent["territories"]]
             continent.setTerritories(territories)
 
+            borderTerritories = set()
+            for territory in continent.territories:
+                for adjacentTerritory in territory.adjacentTerritories:
+                    if adjacentTerritory not in continent.territories:
+                        borderTerritories.add(territory)
+                        break
+            continent.setBorderTerritories(borderTerritories)
+
     def __repr__(self):
         territories = [str(territory) for territory in self.territoriesByID.values()]
         continents = [str(continent) for continent in self.continentsByID.values()]
@@ -34,9 +43,13 @@ class Continent(object):
         self.name = jsonContinent["continent_name"]
         self.continentBonus = jsonContinent["continent_bonus"]
         self.territories = None
+        self.borderTerritories = None
 
     def setTerritories(self, territories):
         self.territories = territories
+
+    def setBorderTerritories(self, borders):
+        self.borderTerritories = borders
 
     def __repr__(self):
         territories = [territory.id for territory in self.territories]

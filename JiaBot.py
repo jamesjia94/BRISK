@@ -13,11 +13,13 @@ class JiaBot(object):
     team_name = "Test Bot Please Ignore"
     supply_threshold = 0.1
 
-    def __init__(self):
+    def __init__(self, game):
         self.layout = None
-        self.game = None
-        self.state = None
-        self.otherState = None
+        self.game = game
+        self.playerID = self.game.player_id
+        self.otherID = 2 if self.playerID == 1 else 1
+        self.player = None
+        self.other = None
 
     def getMapLayout(self):
         self.layout = BriskMap(self.game.get_map_layout())
@@ -29,22 +31,13 @@ class JiaBot(object):
             if status['current_turn'] or status['eliminated'] or status['winner']:
                 return status
 
-    def run(self, game_num=None):
-        self.game = Brisk(game_num, self.team_name)
+    def run(self):
         print "starting game {} we are player {}".format(self.game.game_id, self.game.player_id)
         self.getMapLayout()
         # print self.layout
 
-        if self.game.player_id == 1:
-            self.state = Player(1, self.layout)
-            self.otherState = Player(2, self.layout)
-        else:
-            self.state = Player(2, self.layout)
-            self.otherState = Player(1, self.layout)
-
         while True:
             status = self.wait_for_turn()
-
             if status['eliminated']:
                 print "We lost"
                 break
@@ -59,36 +52,29 @@ class JiaBot(object):
             self.game.end_turn()
 
     def executeStrategy(self, status):
-        self.updatePlayerStates()
-        # print self.state
-        # print self.otherState
+        state = self.updatePlayerStates()
+        print "Num turns taken: {}".format(state["num_turns_taken"]+1,)
+        print "Player: {}".format(self.player)
+        print "Other: {}".format(self.other)
+        print ""
         self.supplyTroops(status)
+        self.updatePlayerStates()
+        self.attack()
     
     def updatePlayerStates(self):
         state = self.game.get_game_state()
-        print "Total turns: {}".format(state["num_turns_taken"] + 1)
-        self.clearPlayerStates()
-
-        for territory in state["territories"]:
-            # print "territory {} is held by player {}".format(territory["territory"], territory["player"])
-            if territory["player"] == self.state.id:
-                self.state.updateTerritories(self.layout.getTerritoryByID(territory["territory"]), territory["num_armies"])
-            else:
-                self.otherState.updateTerritories(self.layout.getTerritoryByID(territory["territory"]), territory["num_armies"])
-
-        self.state.updateCountries()
-        self.state.updateArmyReserves()
-        self.otherState.updateCountries()
-        self.otherState.updateArmyReserves()
+        self.player = Player(self.playerID, self.layout, state)
+        self.other = Player(self.otherID, self.layout, state)
+        return state
 
     def supplyTroops(self, status):
         # Find all of our territories that border an enemy territory
         borderTerritories = Counter()
-        for territory in self.state.territories:
+        for territory in self.player.territories:
             for adjacentTerritory in territory.adjacentTerritories:
-                if adjacentTerritory in self.otherState.territories:
-                    borderTerritories[territory] += self.otherState.territories[adjacentTerritory]
-            borderTerritories[territory] /= self.state.territories[territory]
+                if adjacentTerritory in self.other.territories:
+                    borderTerritories[territory] += self.other.territories[adjacentTerritory]
+            borderTerritories[territory] /= self.player.territories[territory]
 
         # print "Prenorm borderTerritories: {}".format(borderTerritories)
 
@@ -105,8 +91,8 @@ class JiaBot(object):
         
         # Can use either.
         reserves = status["num_reserves"]
-        # reserves = self.state.armyReserves
-        assert self.state.armyReserves == reserves
+        # reserves = self.player.armyReserves
+        assert self.player.armyReserves == reserves
 
         placements = {}
         spilloverBorder = None
@@ -130,24 +116,44 @@ class JiaBot(object):
         else:
             placements[spilloverBorder] = max(0, reserves - totalReservesAdded)
 
-        # print placements
-        # print "reserves: {}".format(self.state.armyReserves)
         for border, army in placements.items():
             if army:
                 print "Placing on country {} with armies: {}".format(border.id, int(army))
                 self.game.place_armies(border.id, int(army))
 
-    def clearPlayerStates(self):
-        self.state.clearState()
-        self.otherState.clearState()
+    def attack(self):
+        borderTerritories = []
+        for territory in self.player.territories:
+            for adjacentTerritory in territory.adjacentTerritories:
+                if adjacentTerritory in self.other.territories:
+                    borderTerritories.append(territory)
+
+        while borderTerritories:
+            curr_territory = borderTerritories.pop(0)
+            adjacentTerritories = curr_territory.adjacentTerritories
+            for adjacentTerritory in adjacentTerritories:
+                if adjacentTerritory in self.other.territories:
+                    attackingArmies = self.player.territories[curr_territory]
+                    defendingArmies = self.other.territories[adjacentTerritory]
+                    while attackingArmies > defendingArmies and attackingArmies > 2:
+                        result = self.game.attack(curr_territory.id, adjacentTerritory.id, min(3, attackingArmies-1))
+                        attackingArmies = result["attacker_territory_armies_left"]
+                        defendingArmies = result["defender_territory_armies_left"]
+                        if result["defender_territory_captured"]:
+                            if attackingArmies > 1:
+                                self.game.transfer_armies(curr_territory.id, adjacentTerritory.id, attackingArmies - 1)
+                                borderTerritories.append(adjacentTerritory)
+                            break
+                    self.updatePlayerStates()
 
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-g', default=None, type=int, help="Optional. The game id to join, 0 if we're first")
     args = parser.parse_args()
-    player = JiaBot()
+    game = Brisk(args.g, JiaBot.team_name)
+    player = JiaBot(game)
     # globald["player"] = player
-    player.run(args.g)
+    player.run()
 
 if __name__ == '__main__':
     main()
