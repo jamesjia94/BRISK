@@ -1,0 +1,69 @@
+from __future__ import division
+from Brisk import Brisk
+from BriskMap import BriskMap
+import argparse
+import time
+import random
+import math
+from Player import Player
+from collections import Counter
+
+class AbstractBot(object):
+    team_name = "Test Bot Please Ignore"
+    supply_threshold = 0.1
+
+    def __init__(self, game):
+        self.layout = None
+        self.game = game
+        self.playerID = self.game.player_id
+        self.otherID = 2 if self.playerID == 1 else 1
+        self.player = None
+        self.other = None
+
+    def getMapLayout(self):
+        self.layout = BriskMap(self.game.get_map_layout())
+
+    """" Waits for turn, returning the updated reponse"""
+    def wait_for_turn(self):
+        while True:
+            status = self.game.get_player_status()
+            if status['current_turn'] or status['eliminated'] or status['winner']:
+                return status
+
+    def run(self):
+        print "starting game {} we are player {}".format(self.game.game_id, self.game.player_id)
+        self.getMapLayout()
+        # print self.layout
+
+        while True:
+            status = self.wait_for_turn()
+            if status['eliminated']:
+                print "We lost"
+                break
+            if status['winner']:
+                if status['winner'] == self.game.player_id:
+                    print "We won"
+                    # TODO: Reward?
+                else:
+                    print "Hit the limit of turns and lost"
+                break
+            self.executeStrategy(status)
+            self.game.end_turn()
+
+    def executeStrategy(self, status):
+        state = self.updatePlayerStates()
+        self.supplyTroops(status)
+        self.updatePlayerStates()
+        self.attack()
+    
+    def updatePlayerStates(self):
+        state = self.game.get_game_state()
+        self.player = Player(self.playerID, self.layout, state)
+        self.other = Player(self.otherID, self.layout, state)
+        return state
+
+    def supplyTroops(self, status):
+        pass
+
+    def attack(self):
+        pass
