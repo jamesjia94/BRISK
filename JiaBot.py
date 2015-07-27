@@ -68,6 +68,27 @@ class JiaBot(object):
         return state
 
     def supplyTroops(self, status):
+        # Place our troops to conquer a continent.
+        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[1], reverse=True)
+        for continent,territories in unconqueredContinents:
+            if len(territories) > 2:
+                break
+            for adjacentTerritory in territories[0].adjacentTerritories:
+                if adjacentTerritory in self.player.territories:
+                    print "Placing on country {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
+                    self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
+                    return
+
+        # Place our troops that border an enemy continent.
+        enemyContinents = sorted(self.other.conqueredContinents, key=lambda x: x.continentBonus, reverse=True)
+        for continent in enemyContinents:
+            for territory in continent.territories:
+                for adjacentTerritory in territory.adjacentTerritories:
+                    if adjacentTerritory in self.player.territories:
+                        print "Placing on country {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
+                        self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
+                        return
+
         # Find all of our territories that border an enemy territory
         borderTerritories = Counter()
         for territory in self.player.territories:
@@ -75,8 +96,6 @@ class JiaBot(object):
                 if adjacentTerritory in self.other.territories:
                     borderTerritories[territory] += self.other.territories[adjacentTerritory]
             borderTerritories[territory] /= self.player.territories[territory]
-
-        # print "Prenorm borderTerritories: {}".format(borderTerritories)
 
         # Ignore small values
         for border,value in borderTerritories.items():
@@ -142,12 +161,12 @@ class JiaBot(object):
                         newPlayer = newPlayer.attackResult(result)
                         currState = self.game.get_game_state()
                         try:
-                            assert cmp(newPlayer.state, currState) == 0
+                            assert cmp(newPlayer.state["territories"], currState["territories"]) == 0
                         except Exception:
                             print "Attacking armies left: {}".format(attackingArmies)
                             print "Defending armies left: {}".format(defendingArmies)
-                            print "newPlayer: {}".format(newPlayer.state)
-                            print "currState: {}".format(currState)
+                            print "newPlayer: {}".format(newPlayer.state["territories"])
+                            print "currState: {}".format(currState["territories"])
                             print "\n\n\n"
                             raise Exception()
                         if result["defender_territory_captured"]:
@@ -156,10 +175,10 @@ class JiaBot(object):
                                 self.game.transfer_armies(curr_territory.id, adjacentTerritory.id, attackingArmies - 1)
                                 currState = self.game.get_game_state()
                                 try:
-                                    assert cmp(newPlayer.state, currState) == 0
+                                    assert cmp(newPlayer.state["territories"], currState["territories"]) == 0
                                 except Exception:
-                                    print "newPlayer: {}".format(newPlayer.state)
-                                    print "currState: {}".format(currState)
+                                    print "newPlayer: {}".format(newPlayer.state["territories"])
+                                    print "currState: {}".format(currState["territories"])
                                     print "\n\n\n"
                                     raise Exception()
                                 borderTerritories.append(adjacentTerritory)
