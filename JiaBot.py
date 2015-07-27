@@ -99,21 +99,28 @@ class JiaBot(AbstractBot):
             adjacentTerritories = curr_territory.adjacentTerritories
             for adjacentTerritory in adjacentTerritories:
                 if adjacentTerritory in self.other.territories:
-                    attackingArmies = self.player.territories[curr_territory]
-                    defendingArmies = self.other.territories[adjacentTerritory]
-                    while attackingArmies > defendingArmies and attackingArmies > 2:
-                        result = self.game.attack(curr_territory.id, adjacentTerritory.id, min(3, attackingArmies-1))
-                        attackingArmies = result["attacker_territory_armies_left"]
-                        defendingArmies = result["defender_territory_armies_left"]
-                        currState = self.game.get_game_state()
-                        
-                        if result["defender_territory_captured"]:
-                            if attackingArmies > 1:
-                                self.game.transfer_armies(curr_territory.id, adjacentTerritory.id, attackingArmies - 1)
-                                currState = self.game.get_game_state()
-                                borderTerritories.append(adjacentTerritory)
-                            break
-                    self.updatePlayerStates()
+                    capturedTerritory = self.command_attack(curr_territory, adjacentTerritory)
+                    if capturedTerritory:
+                        borderTerritories.append(capturedTerritory)
+
+    def command_attack(self, attackingTerritory, defendingTerritory):
+        capturedTerritory = None
+        attackingArmies = self.player.territories[attackingTerritory]
+        defendingArmies = self.other.territories[defendingTerritory]
+        while attackingArmies > defendingArmies and attackingArmies > 2:
+            result = self.game.attack(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
+            attackingArmies = result["attacker_territory_armies_left"]
+            defendingArmies = result["defender_territory_armies_left"]
+            
+            if result["defender_territory_captured"]:
+                if attackingArmies > 1:
+                    self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 1)
+                    capturedTerritory = defendingTerritory
+                break
+        self.updatePlayerStates()
+        return capturedTerritory
+
+
 
 def main():
     parser = argparse.ArgumentParser()
