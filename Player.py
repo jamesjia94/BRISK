@@ -48,37 +48,35 @@ class Player(object):
         self.armyReserves = max(self.armyReserves, len(self.territories)//3) + totalContinentBonus
 
     def attackResult(self, result):
-        attackerTerritory = result["attacker_territory"]
-        defenderTerritory = result["defender_territory"]
-        capturedDefenderTerritory = result["defender_territory_captured"]
-        attackerArmyLeft = result["attacker_territory_armies_left"]
-        defenderArmyLeft = result["defender_territory_armies_left"]
+        attackerTerritory = int(result["attacker_territory"])
+        defenderTerritory = int(result["defender_territory"])
+        capturedDefenderTerritory = int(result["defender_territory_captured"])
+        attackerArmyLeft = int(result["attacker_territory_armies_left"])
+        defenderArmyLeft = int(result["defender_territory_armies_left"])
         newState = self.state
         newTerritories = []
         for territory in self.state["territories"]:
+            newTerritory = territory.copy()
             if territory["territory"] == attackerTerritory:
-                newTerritories.append({"territory": attackerTerritory, "player": self.id, "num_armies": attackerArmyLeft})
-            elif territory["territory"] == defenderTerritory:
-                newTerritoryState = {"territory": attackerTerritory, "num_armies": defenderArmyLeft}
+                newTerritory["num_armies"] = attackerArmyLeft
+            if territory["territory"] == defenderTerritory:
+                newTerritory["num_armies"] = defenderArmyLeft
                 if capturedDefenderTerritory:
-                    newTerritoryState["player"] = self.id
-                else:
-                    newTerritoryState["player"] = territory["player"]
-                newTerritories.append(newTerritoryState)
-            else:
-                newTerritories.append(territory)
+                    newTerritory["player"] = self.id
+            newTerritories.append(newTerritory)
         newState["territories"] = newTerritories
         return Player(self.id, self.layout, newState)
 
-    def transferArmy(self, numTransfer, src, dst):
+    def transferArmy(self, src, dst, numTransfer):
         newState = self.state
+        newTerritories = []
         for territory in self.state["territories"]:
+            newTerritory = territory.copy()
             if territory["territory"] == src:
-                newTerritories.append({"territory": attackerTerritory, "player": self.id, "num_armies": territory["territory"] - numTransfer})
+                newTerritory["num_armies"] = territory["num_armies"] - numTransfer
             elif territory["territory"] == dst:
-                newTerritories.append({"territory": attackerTerritory, "player": self.id, "num_armies": territory["territory"] + numTransfer})
-            else:
-                newTerritories.append(territory)
+                newTerritory["num_armies"] = territory["num_armies"] + numTransfer
+            newTerritories.append(newTerritory)
         newState["territories"] = newTerritories
         return Player(self.id, self.layout, newState)
 
