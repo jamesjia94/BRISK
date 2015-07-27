@@ -19,11 +19,12 @@ class JiaBot(AbstractBot):
         for continent,territories in unconqueredContinents:
             if len(territories) > 2:
                 break
-            for adjacentTerritory in territories[0].adjacentTerritories:
-                if adjacentTerritory in self.player.territories:
-                    print "Placing on country {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
-                    self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
-                    return
+            for territory in territories:
+                for adjacentTerritory in territory.adjacentTerritories:
+                    if adjacentTerritory in self.player.territories:
+                        print "Placing on country {} with armies {} to conquer country {}".format(adjacentTerritory.id, int(self.player.armyReserves), territory.id)
+                        self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
+                        return
 
         # Place our troops that border an enemy continent.
         enemyContinents = sorted(self.other.conqueredContinents, key=lambda x: x.continentBonus, reverse=True)
@@ -90,9 +91,9 @@ class JiaBot(AbstractBot):
         borderTerritories = []
         for territory in self.player.territories:
             for adjacentTerritory in territory.adjacentTerritories:
-                if adjacentTerritory in self.other.territories:
+                if adjacentTerritory not in self.player.territories:
                     borderTerritories.append(territory)
-        newPlayer = self.player
+        
         while borderTerritories:
             curr_territory = borderTerritories.pop(0)
             adjacentTerritories = curr_territory.adjacentTerritories
@@ -104,33 +105,15 @@ class JiaBot(AbstractBot):
                         result = self.game.attack(curr_territory.id, adjacentTerritory.id, min(3, attackingArmies-1))
                         attackingArmies = result["attacker_territory_armies_left"]
                         defendingArmies = result["defender_territory_armies_left"]
-                        newPlayer = newPlayer.attackResult(result)
                         currState = self.game.get_game_state()
-                        try:
-                            assert cmp(newPlayer.state["territories"], currState["territories"]) == 0
-                        except Exception:
-                            print "Attacking armies left: {}".format(attackingArmies)
-                            print "Defending armies left: {}".format(defendingArmies)
-                            print "newPlayer: {}".format(newPlayer.state["territories"])
-                            print "currState: {}".format(currState["territories"])
-                            print "\n\n\n"
-                            raise Exception()
+                        
                         if result["defender_territory_captured"]:
                             if attackingArmies > 1:
-                                newPlayer = newPlayer.transferArmy(curr_territory.id, adjacentTerritory.id, attackingArmies - 1)
                                 self.game.transfer_armies(curr_territory.id, adjacentTerritory.id, attackingArmies - 1)
                                 currState = self.game.get_game_state()
-                                try:
-                                    assert cmp(newPlayer.state["territories"], currState["territories"]) == 0
-                                except Exception:
-                                    print "newPlayer: {}".format(newPlayer.state["territories"])
-                                    print "currState: {}".format(currState["territories"])
-                                    print "\n\n\n"
-                                    raise Exception()
                                 borderTerritories.append(adjacentTerritory)
                             break
                     self.updatePlayerStates()
-                    newPlayer = self.player
 
 def main():
     parser = argparse.ArgumentParser()

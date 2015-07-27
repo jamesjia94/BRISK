@@ -48,13 +48,13 @@ class AbstractBot(object):
                     print "Hit the limit of turns and lost"
                 break
             self.executeStrategy(status)
-            self.game.end_turn()
 
     def executeStrategy(self, status):
         state = self.updatePlayerStates()
         self.supplyTroops(status)
         self.updatePlayerStates()
         self.attack()
+        self.transferArmies()
     
     def updatePlayerStates(self):
         state = self.game.get_game_state()
@@ -67,3 +67,9 @@ class AbstractBot(object):
 
     def attack(self):
         pass
+
+    def transferArmies(self):
+        state = self.game.get_game_state()
+        if state["winner"]:
+            return
+        self.game.end_turn()
