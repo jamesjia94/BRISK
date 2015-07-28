@@ -1,3 +1,4 @@
+import sys
 class BriskMap(object):
     def __init__(self, jsonMap):
         self.territoriesByID = {jsonTerritory["territory"]:Territory(jsonTerritory) for jsonTerritory in jsonMap["territories"]}
@@ -5,6 +6,32 @@ class BriskMap(object):
         self.continentsByID = {jsonContinent["continent"]:Continent(jsonContinent) for jsonContinent in jsonMap["continents"]}
         self.initializeContinents(jsonMap["continents"])
         self.continents = self.continentsByID.values()
+        self.shortestPathMatrix = [[sys.maxint for i in range(len(self.territoriesByID))] for i in range(len(self.territoriesByID))]
+        self.nextTerritoryMatrix = [[None for i in range(len(self.territoriesByID))] for i in range(len(self.territoriesByID))]
+        self.floydWarshall()
+    
+    def floydWarshall(self):
+        for territoryID in self.territoriesByID.keys():
+            self.shortestPathMatrix[territoryID-1][territoryID-1] = 0
+        for territory in self.territoriesByID.values():
+            for adjacentTerritory in territory.adjacentTerritories:
+                self.shortestPathMatrix[territory.id-1][adjacentTerritory.id-1] = 1
+                self.nextTerritoryMatrix[territory.id-1][adjacentTerritory.id-1] = adjacentTerritory
+        for k in range(len(self.territoriesByID)):
+            for i in range(len(self.territoriesByID)):
+                for j in range(len(self.territoriesByID)):
+                    if self.shortestPathMatrix[i][j] > self.shortestPathMatrix[i][k] + self.shortestPathMatrix[k][j]:
+                        self.shortestPathMatrix[i][j] = self.shortestPathMatrix[i][k] + self.shortestPathMatrix[k][j]
+                        self.nextTerritoryMatrix[i][j] = self.nextTerritoryMatrix[i][k]
+
+    def getPath(self, u, v):
+        if self.nextTerritoryMatrix[u.id-1][v.id-1] == None:
+            return []
+        path = [u]
+        while u.id != v.id:
+            u = self.nextTerritoryMatrix[u.id-1][v.id-1]
+            path.append(u)
+        return path
 
     def getTerritoryByID(self, id):
         return self.territoriesByID[id]

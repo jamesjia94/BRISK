@@ -15,7 +15,8 @@ class JiaBot(AbstractBot):
 
     def supplyTroops(self, status):
         # Place our troops to conquer a continent.
-        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[1], reverse=True)
+        armyReserves = self.player.armyReserves
+        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: len(x[1]))
         for continent,territories in unconqueredContinents:
             if len(territories) > 2:
                 break
@@ -88,6 +89,27 @@ class JiaBot(AbstractBot):
                 self.game.place_armies(border.id, int(army))
 
     def attack(self):
+        flag = True
+        while flag:
+            flag = False
+            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: len(x[1]))
+            for continent,territories in unconqueredContinents:
+                if len(territories) > 2:
+                    break
+
+                continueFlag = True
+                for territory in territories:
+                    for adjacentTerritory in territory.adjacentTerritories:
+                        if adjacentTerritory in self.player.territories:
+                            if self.command_attack(adjacentTerritory, territory):
+                                flag = True
+                                continueFlag = False
+                                break
+                    if not continueFlag:
+                        break
+                if not continueFlag:
+                    break
+
         borderTerritories = []
         for territory in self.player.territories:
             for adjacentTerritory in territory.adjacentTerritories:
@@ -113,13 +135,37 @@ class JiaBot(AbstractBot):
             defendingArmies = result["defender_territory_armies_left"]
             
             if result["defender_territory_captured"]:
+                capturedTerritory = defendingTerritory
                 if attackingArmies > 1:
                     self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 1)
-                    capturedTerritory = defendingTerritory
                 break
         self.updatePlayerStates()
         return capturedTerritory
 
+    def transferArmies(self):
+        state = self.game.get_game_state()
+        if state["winner"]:
+            return
+
+        src = None
+        dst = None
+        pathLength = -1
+        for continent in self.player.conqueredContinents:
+            for territory in [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]:
+                for border in continent.borderTerritories:
+                    p = self.layout.getPath(territory,border)
+                    if not src:
+                        src = p[0]
+                        dst = p[1]
+                        pathLength = len(p)
+                    elif pathLength > len(p):
+                        src = p[0]
+                        dst = p[1]
+                        pathLength = len(p)
+        if src:
+            print "Transferring {} armies from {} to {} during army transfer phase.".format(self.player.territories[src.id]-1, src.id,dst.id)
+            self.game.transfer_armies(src.id,dst.id, self.player.territories[src.id]-1)
+        self.game.end_turn()
 
 
 def main():

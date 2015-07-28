@@ -6,6 +6,7 @@ class Player(object):
         # Mapping of territory ID to numArmy
         self.territories = {}
         self.armyReserves = 3
+        # Mapping of continent obj to territories that aren't conquered.
         self.unconqueredContinents = {}
         self.conqueredContinents = set()
         self.borderTerritories = set()
