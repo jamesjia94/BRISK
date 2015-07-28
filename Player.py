@@ -3,7 +3,7 @@ class Player(object):
         self.id = id
         self.layout = layout
         self.state = state
-        # Mapping of territory ID to numArmy
+        # Mapping of territory obj to numArmy
         self.territories = {}
         self.armyReserves = 3
         # Mapping of continent obj to territories that aren't conquered.

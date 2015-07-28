@@ -146,26 +146,29 @@ class JiaBot(AbstractBot):
         state = self.game.get_game_state()
         if state["winner"]:
             return
-
         src = None
         dst = None
         pathLength = -1
         for continent in self.player.conqueredContinents:
             for territory in [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]:
                 for border in continent.borderTerritories:
-                    p = self.layout.getPath(territory,border)
-                    if not src:
-                        src = p[0]
-                        dst = p[1]
-                        pathLength = len(p)
-                    elif pathLength > len(p):
-                        src = p[0]
-                        dst = p[1]
-                        pathLength = len(p)
+                    armiesToMove = self.player.territories[territory]-1
+                    if armiesToMove > 1:
+                        p = self.layout.getPath(territory,border)
+                        if not src:
+                            src = p[0]
+                            dst = p[1]
+                            pathLength = len(p)
+                        elif pathLength > len(p):
+                            src = p[0]
+                            dst = p[1]
+                            pathLength = len(p)
         if src:
-            print "Transferring {} armies from {} to {} during army transfer phase.".format(self.player.territories[src.id]-1, src.id,dst.id)
-            self.game.transfer_armies(src.id,dst.id, self.player.territories[src.id]-1)
-        self.game.end_turn()
+            armiesToMove = self.player.territories[src]-1
+            print "Transferring {} armies from {} to {} during army transfer phase.".format(armiesToMove, src.id,dst.id)
+            self.game.transfer_armies(src.id,dst.id, armiesToMove)
+        else:
+            self.game.end_turn()
 
 
 def main():
