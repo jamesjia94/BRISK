@@ -6,6 +6,7 @@ class BriskMap(object):
         self.continentsByID = {jsonContinent["continent"]:Continent(jsonContinent) for jsonContinent in jsonMap["continents"]}
         self.initializeContinents(jsonMap["continents"])
         self.continents = self.continentsByID.values()
+        self.associateTerritoryWithContinent()
         self.shortestPathMatrix = [[sys.maxint for i in range(len(self.territoriesByID))] for i in range(len(self.territoriesByID))]
         self.nextTerritoryMatrix = [[None for i in range(len(self.territoriesByID))] for i in range(len(self.territoriesByID))]
         self.floydWarshall()
@@ -59,6 +60,11 @@ class BriskMap(object):
                         break
             continent.setBorderTerritories(borderTerritories)
 
+    def associateTerritoryWithContinent(self):
+        for continent in self.continents:
+            for territory in continent.territories:
+                territory.continent = continent
+
     def __repr__(self):
         territories = [str(territory) for territory in self.territoriesByID.values()]
         continents = [str(continent) for continent in self.continentsByID.values()]
@@ -87,6 +93,7 @@ class Territory(object):
         self.id = jsonTerritory["territory"]
         self.name = jsonTerritory["territory_name"]
         self.adjacentTerritories = None
+        self.continent = None
 
     def setAdjacentTerritories(self, adjacentTerritories):
         self.adjacentTerritories = adjacentTerritories

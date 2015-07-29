@@ -14,16 +14,16 @@ class JiaBot(AbstractBot):
     supply_threshold = 0.1
 
     def supplyTroops(self, status):
-        # Place our troops to conquer a continent.
+        # Place our troops to conqueredContinents a continent.
         armyReserves = self.player.armyReserves
-        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: len(x[1]))
+        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[0].continentBonus/len(x[0].borderTerritories))
         for continent,territories in unconqueredContinents:
-            if len(territories) > 2:
-                break
+            if len(territories) < 0.25 * len(continent.territories):
+                continue
             for territory in territories:
                 for adjacentTerritory in territory.adjacentTerritories:
                     if adjacentTerritory in self.player.territories:
-                        print "Placing on country {} with armies {} to conquer country {}".format(adjacentTerritory.id, int(self.player.armyReserves), territory.id)
+                        print "Placing on territory {} with armies {} to conquer territory {}".format(adjacentTerritory.id, int(self.player.armyReserves), territory.id)
                         self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
                         return
 
@@ -33,7 +33,7 @@ class JiaBot(AbstractBot):
             for territory in continent.territories:
                 for adjacentTerritory in territory.adjacentTerritories:
                     if adjacentTerritory in self.player.territories:
-                        print "Placing on country {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
+                        print "Placing on territory {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
                         self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
                         return
 
@@ -92,11 +92,10 @@ class JiaBot(AbstractBot):
         flag = True
         while flag:
             flag = False
-            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: len(x[1]))
+            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[0].continentBonus/len(x[0].borderTerritories))
             for continent,territories in unconqueredContinents:
                 if len(territories) > 2:
-                    break
-
+                    continue
                 continueFlag = True
                 for territory in territories:
                     for adjacentTerritory in territory.adjacentTerritories:
@@ -146,29 +145,33 @@ class JiaBot(AbstractBot):
         state = self.game.get_game_state()
         if state["winner"]:
             return
-        src = None
-        dst = None
-        pathLength = -1
+
+        territoriesByArmies = sorted(self.player.territories.items(), key=lambda x: x[1], reverse=True)
         for continent in self.player.conqueredContinents:
-            for territory in [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]:
+            nonborderTerritories = [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]
+            sortedNonBorderTerritories = sorted(nonborderTerritories, key=lambda x: self.player.territories[x],reverse=True)
+            for territory in sortedNonBorderTerritories:
                 for border in continent.borderTerritories:
-                    armiesToMove = self.player.territories[territory]-1
-                    if armiesToMove > 1:
-                        p = self.layout.getPath(territory,border)
-                        if not src:
-                            src = p[0]
-                            dst = p[1]
-                            pathLength = len(p)
-                        elif pathLength > len(p):
-                            src = p[0]
-                            dst = p[1]
-                            pathLength = len(p)
-        if src:
-            armiesToMove = self.player.territories[src]-1
-            print "Transferring {} armies from {} to {} during army transfer phase.".format(armiesToMove, src.id,dst.id)
-            self.game.transfer_armies(src.id,dst.id, armiesToMove)
-        else:
-            self.game.end_turn()
+                    for adjacentTerritory in border.adjacentTerritories:
+                        if adjacentTerritory.continent not in self.player.conqueredContinents:
+                            armiesToMove = self.player.territories[territory]-1
+                            if armiesToMove > 1:
+                                p = self.layout.getPath(territory,border)
+                                print "transferring {} to {} using {}".format(territory.id,p[1].id,armiesToMove)
+                                self.game.transfer_armies(territory.id,p[1].id, armiesToMove)
+                                return
+                for othercontinent in self.player.conqueredContinents:
+                    for border in othercontinent.borderTerritories:
+                        for adjacentTerritory in border.adjacentTerritories:
+                            if adjacentTerritory.continent not in self.player.conqueredContinents:
+                                armiesToMove = self.player.territories[territory]-1
+                                if armiesToMove > 1:
+                                    p = self.layout.getPath(territory,border)
+                                    print "transferring {} to {} using {}".format(territory.id,p[1].id,armiesToMove)
+                                    self.game.transfer_armies(territory.id,p[1].id, armiesToMove)
+                                    return
+
+        self.game.end_turn()
 
 
 def main():
