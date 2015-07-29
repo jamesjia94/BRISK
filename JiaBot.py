@@ -16,7 +16,7 @@ class JiaBot(AbstractBot):
     def supplyTroops(self, status):
         # Place our troops to conqueredContinents a continent.
         armyReserves = self.player.armyReserves
-        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[0].continentBonus/len(x[0].borderTerritories))
+        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
         for continent,territories in unconqueredContinents:
             if len(territories) < 0.25 * len(continent.territories):
                 continue
@@ -92,7 +92,7 @@ class JiaBot(AbstractBot):
         flag = True
         while flag:
             flag = False
-            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: x[0].continentBonus/len(x[0].borderTerritories))
+            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
             for continent,territories in unconqueredContinents:
                 if len(territories) > 2:
                     continue
@@ -135,8 +135,8 @@ class JiaBot(AbstractBot):
             
             if result["defender_territory_captured"]:
                 capturedTerritory = defendingTerritory
-                if attackingArmies > 1:
-                    self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 1)
+                if attackingArmies > 2:
+                    self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                 break
         self.updatePlayerStates()
         return capturedTerritory
