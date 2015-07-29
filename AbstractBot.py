@@ -27,7 +27,7 @@ class AbstractBot(object):
     def wait_for_turn(self):
         while True:
             status = self.game.get_player_status()
-            if status['current_turn'] or status['eliminated'] or status['winner']:
+            if status['current_turn'] or status['eliminated']:
                 return status
 
     def run(self):
@@ -39,13 +39,6 @@ class AbstractBot(object):
             status = self.wait_for_turn()
             if status['eliminated']:
                 print "We lost"
-                break
-            if status['winner']:
-                if status['winner'] == self.game.player_id:
-                    print "We won"
-                    # TODO: Reward?
-                else:
-                    print "Hit the limit of turns and lost"
                 break
             self.executeStrategy(status)
 

@@ -8,6 +8,7 @@ import math
 from AbstractBot import AbstractBot
 from Player import Player
 from collections import Counter
+import traceback
 
 class JiaBot(AbstractBot):
     team_name = "Test Bot Please Ignore"
@@ -18,7 +19,8 @@ class JiaBot(AbstractBot):
         armyReserves = self.player.armyReserves
         unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
         for continent,territories in unconqueredContinents:
-            if len(territories) < 0.25 * len(continent.territories):
+            if len(territories) > 0.75 * len(continent.territories):
+                print "Continent {} has too many territories to conquer".format(continent.name)
                 continue
             for territory in territories:
                 for adjacentTerritory in territory.adjacentTerritories:
@@ -94,7 +96,7 @@ class JiaBot(AbstractBot):
             flag = False
             unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
             for continent,territories in unconqueredContinents:
-                if len(territories) > 2:
+                if len(territories) > 0.75 * len(continent.territories):
                     continue
                 continueFlag = True
                 for territory in territories:
@@ -136,16 +138,21 @@ class JiaBot(AbstractBot):
             if result["defender_territory_captured"]:
                 capturedTerritory = defendingTerritory
                 if attackingArmies > 2:
+                    print "Captured territory: Transfering army from territory {} to territory {} using armies {}".format(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                     self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                 break
-        self.updatePlayerStates()
+        z = self.updatePlayerStates()
+        if z["winner"]:
+            print ''.join(traceback.format_stack())
+            print "Attacked: from territory {} to territory {}".format(attackingTerritory.id, defendingTerritory.id)
+            print z["winner"]
         return capturedTerritory
 
     def transferArmies(self):
         state = self.game.get_game_state()
         if state["winner"]:
             return
-
+        print "got here"
         territoriesByArmies = sorted(self.player.territories.items(), key=lambda x: x[1], reverse=True)
         for continent in self.player.conqueredContinents:
             nonborderTerritories = [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]
@@ -170,7 +177,7 @@ class JiaBot(AbstractBot):
                                     print "transferring {} to {} using {}".format(territory.id,p[1].id,armiesToMove)
                                     self.game.transfer_armies(territory.id,p[1].id, armiesToMove)
                                     return
-
+        print "Ending turn"
         self.game.end_turn()
 
 
