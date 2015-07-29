@@ -27,8 +27,10 @@ class AbstractBot(object):
     def wait_for_turn(self):
         while True:
             status = self.game.get_player_status()
-            if status['current_turn'] or status['eliminated']:
+            if status['current_turn'] or status['eliminated'] or status['winner']:
                 return status
+            else:
+                time.sleep(0.1)
 
     def run(self):
         print "starting game {} we are player {}".format(self.game.game_id, self.game.player_id)
@@ -40,6 +42,13 @@ class AbstractBot(object):
             if status['eliminated']:
                 print "We lost"
                 break
+            if status['winner']:
+                if status['winner'] == self.game.player_id:
+                    print "We won"
+                    # TODO: Reward?
+                else:
+                    print "Hit the limit of turns and lost"
+                break
             self.executeStrategy(status)
 
     def executeStrategy(self, status):
@@ -50,9 +59,12 @@ class AbstractBot(object):
         self.transferArmies()
     
     def updatePlayerStates(self):
+        start = time.time()
         state = self.game.get_game_state()
         self.player = Player(self.playerID, self.layout, state)
         self.other = Player(self.otherID, self.layout, state)
+        end = time.time()
+        print "Updating player state took: {}".format(end-start)
         return state
 
     def supplyTroops(self, status):

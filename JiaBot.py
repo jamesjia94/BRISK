@@ -11,18 +11,20 @@ from collections import Counter
 import traceback
 
 class JiaBot(AbstractBot):
-    team_name = "Test Bot Please Ignore"
+    team_name = "Ign"
     supply_threshold = 0.1
 
     def supplyTroops(self, status):
+        print "Supply Phase"
         # Place our troops to conqueredContinents a continent.
         armyReserves = self.player.armyReserves
-        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
-        for continent,territories in unconqueredContinents:
-            if len(territories) > 0.75 * len(continent.territories):
+        unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]["unconqueredTerritories"]),-x[0].continentBonus/len(x[0].borderTerritories)))
+        for continent,territoryDict in unconqueredContinents:
+            unconqueredTerritories = territoryDict["unconqueredTerritories"]
+            if len(unconqueredTerritories) > 0.75 * len(continent.territories):
                 print "Continent {} has too many territories to conquer".format(continent.name)
-                continue
-            for territory in territories:
+                break
+            for territory in unconqueredTerritories:
                 for adjacentTerritory in territory.adjacentTerritories:
                     if adjacentTerritory in self.player.territories:
                         print "Placing on territory {} with armies {} to conquer territory {}".format(adjacentTerritory.id, int(self.player.armyReserves), territory.id)
@@ -91,21 +93,27 @@ class JiaBot(AbstractBot):
                 self.game.place_armies(border.id, int(army))
 
     def attack(self):
+        print "Attack Phase"
+        start = time.time()
         flag = True
         while flag:
             flag = False
-            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]),x[0].continentBonus/len(x[0].borderTerritories)))
-            for continent,territories in unconqueredContinents:
-                if len(territories) > 0.75 * len(continent.territories):
-                    continue
+            unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]["unconqueredTerritories"]),-x[0].continentBonus/len(x[0].borderTerritories)))
+            for continent,territoryDict in unconqueredContinents:
+                unconqueredTerritories = territoryDict["unconqueredTerritories"]
+                conqueredTerritories = territoryDict["conqueredTerritories"]
+                if len(unconqueredTerritories) > 0.75 * len(continent.territories):
+                    break
                 continueFlag = True
-                for territory in territories:
-                    for adjacentTerritory in territory.adjacentTerritories:
-                        if adjacentTerritory in self.player.territories:
-                            if self.command_attack(adjacentTerritory, territory):
-                                flag = True
-                                continueFlag = False
-                                break
+                for attackingTerritory in conqueredTerritories:
+                    attackingArmies = self.player.territories[attackingTerritory]
+                    if attackingArmies > 2:
+                        for adjacentTerritory in attackingTerritory.adjacentTerritories:
+                            if adjacentTerritory in self.other.territories:
+                                if self.command_attack(attackingTerritory, adjacentTerritory):
+                                    flag = True
+                                    continueFlag = False
+                                    break
                     if not continueFlag:
                         break
                 if not continueFlag:
@@ -125,34 +133,36 @@ class JiaBot(AbstractBot):
                     capturedTerritory = self.command_attack(curr_territory, adjacentTerritory)
                     if capturedTerritory:
                         borderTerritories.append(capturedTerritory)
+        end = time.time()
+        print "Attack phase took: {}".format(end-start)
 
     def command_attack(self, attackingTerritory, defendingTerritory):
         capturedTerritory = None
         attackingArmies = self.player.territories[attackingTerritory]
         defendingArmies = self.other.territories[defendingTerritory]
         while attackingArmies > defendingArmies and attackingArmies > 2:
+            print "attacking: {} from {} with {} armies".format(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             result = self.game.attack(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             attackingArmies = result["attacker_territory_armies_left"]
             defendingArmies = result["defender_territory_armies_left"]
-            
+            self.player = self.player.attackResult(result)
+            self.other = Player(self.other.id, self.other.layout, self.player.state)
             if result["defender_territory_captured"]:
                 capturedTerritory = defendingTerritory
                 if attackingArmies > 2:
                     print "Captured territory: Transfering army from territory {} to territory {} using armies {}".format(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                     self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
+                    self.player = self.player.transferArmy(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
+                    self.other = Player(self.other.id, self.other.layout, self.player.state)
                 break
-        z = self.updatePlayerStates()
-        if z["winner"]:
-            print ''.join(traceback.format_stack())
-            print "Attacked: from territory {} to territory {}".format(attackingTerritory.id, defendingTerritory.id)
-            print z["winner"]
+        
         return capturedTerritory
 
     def transferArmies(self):
         state = self.game.get_game_state()
         if state["winner"]:
             return
-        print "got here"
+        print "Transfer phase"
         territoriesByArmies = sorted(self.player.territories.items(), key=lambda x: x[1], reverse=True)
         for continent in self.player.conqueredContinents:
             nonborderTerritories = [nonborder for nonborder in continent.territories if nonborder not in continent.borderTerritories]

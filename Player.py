@@ -36,10 +36,13 @@ class Player(object):
     def updateCountries(self):
         for continent in self.layout.continents:
             unconqueredTerritories = []
+            conqueredTerritories = []
             for territory in continent.territories:
                 if territory not in self.territories:
                     unconqueredTerritories.append(territory)
-            self.unconqueredContinents[continent] = unconqueredTerritories
+                else:
+                    conqueredTerritories.append(territory)
+            self.unconqueredContinents[continent] = {"unconqueredTerritories": unconqueredTerritories, "conqueredTerritories": conqueredTerritories}
             if not unconqueredTerritories:
                 self.conqueredContinents.add(continent)
 
@@ -80,4 +83,3 @@ class Player(object):
             newTerritories.append(newTerritory)
         newState["territories"] = newTerritories
         return Player(self.id, self.layout, newState)
-
