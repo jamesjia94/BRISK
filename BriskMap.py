@@ -99,5 +99,7 @@ class Territory(object):
         self.adjacentTerritories = adjacentTerritories
 
     def __repr__(self):
-        adjacentTerritories = [territory.id for territory in self.adjacentTerritories]
-        return "Territory {} is named {} with adjacentTerritories: {}".format(self.id, self.name, adjacentTerritories)
+        # adjacentTerritories = [territory.id for territory in self.adjacentTerritories]
+        # return "Territory {} is named {} with adjacentTerritories: {}".format(self.id, self.name, adjacentTerritories)
+        return "Territory {} is named {}".format(self.id, self.name)
+

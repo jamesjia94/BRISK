@@ -96,7 +96,7 @@ class Player(object):
         newState["territories"] = newTerritories
         return Player(self.id, self.layout, newState)
 
-    # returns a list of valid paths that go from stsart to end.
+    # returns a list of valid paths that go from start to end.
     def get_paths(self,start,end):
         all_paths = []
         q = deque([])
@@ -113,5 +113,4 @@ class Player(object):
                     new_path = []
                     new_path = tmp_path + [link_node]
                     q.append(new_path)
-
         return all_paths
