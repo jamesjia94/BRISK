@@ -6,3 +6,4 @@ We want to stop over-extending. Instead, we should only attack from a border to 
 
 Supply troops based on an attack path.
 
+Change transfer phase logic to transfer to a border territory whose adjacent territories are not part of a continent that is already ours.
