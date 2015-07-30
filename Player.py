@@ -1,3 +1,4 @@
+from collections import deque
 class Player(object):
     def __init__(self, id, layout, state):
         self.id = id
@@ -83,3 +84,34 @@ class Player(object):
             newTerritories.append(newTerritory)
         newState["territories"] = newTerritories
         return Player(self.id, self.layout, newState)
+
+    def placeArmy(self, src, armies_to_supply):
+        newState = self.state
+        newTerritories = []
+        for territory in self.state["territories"]:
+            newTerritory = territory.copy()
+            if territory["territory"] == src:
+                newTerritory["num_armies"] = territory["num_armies"] + armies_to_supply
+            newTerritories.append(newTerritory)
+        newState["territories"] = newTerritories
+        return Player(self.id, self.layout, newState)
+
+    # returns a list of valid paths that go from stsart to end.
+    def get_paths(self,start,end):
+        all_paths = []
+        q = deque([])
+        q.append([start])
+        
+        while len(q) > 0:
+            tmp_path = q.popleft()
+            last_node = tmp_path[len(tmp_path)-1]
+            print tmp_path
+            if last_node.id == end.id:
+                all_paths.append(tmp_path)
+            for link_node in last_node.adjacentTerritories:
+                if link_node not in tmp_path and link_node not in self.territories and link_node in start.continent.territories:
+                    new_path = []
+                    new_path = tmp_path + [link_node]
+                    q.append(new_path)
+
+        return all_paths
