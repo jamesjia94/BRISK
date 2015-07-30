@@ -105,7 +105,7 @@ class Player(object):
         while len(q) > 0:
             tmp_path = q.popleft()
             last_node = tmp_path[len(tmp_path)-1]
-            print tmp_path
+            # print tmp_path
             if last_node.id == end.id:
                 all_paths.append(tmp_path)
             for link_node in last_node.adjacentTerritories:
