@@ -21,15 +21,35 @@ class JiaBot(AbstractBot):
         unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]["unconqueredTerritories"]),-x[0].continentBonus/len(x[0].borderTerritories)))
         for continent,territoryDict in unconqueredContinents:
             unconqueredTerritories = territoryDict["unconqueredTerritories"]
+            conqueredTerritories = territoryDict["conqueredTerritories"]
             if len(unconqueredTerritories) > 0.75 * len(continent.territories):
                 print "Continent {} has too many territories to conquer".format(continent.name)
                 break
-            for territory in unconqueredTerritories:
+
+            # If an enemy territory borders two allied territories, only supply to one allied territory.
+            markedEnemyTerritories = set()
+            for territory in conqueredTerritories:
+                num_armies_in_territory = self.player.territories[territory]
+                num_enemy_armies_bordering = 0
+                max_neighboring_army = 0
                 for adjacentTerritory in territory.adjacentTerritories:
-                    if adjacentTerritory in self.player.territories:
-                        print "Placing on territory {} with armies {} to conquer territory {}".format(adjacentTerritory.id, int(self.player.armyReserves), territory.id)
-                        self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
+                    if adjacentTerritory in self.other.territories and adjacentTerritory not in markedEnemyTerritories:
+                        num_enemy_armies_bordering += self.other.territories[adjacentTerritory]
+                        max_neighboring_army = max(max_neighboring_army, self.other.territories[adjacentTerritory])
+                        markedEnemyTerritories.add(adjacentTerritory)
+
+                armies_to_supply = max(int(math.ceil(num_enemy_armies_bordering*1.5)), max_neighboring_army*2) - num_armies_in_territory
+                if armies_to_supply > 0:
+                    if armyReserves > 0:
+                        armies_to_supply = min(armies_to_supply, armyReserves)
+                        print "Placing on territory {} with armies {}".format(territory.id, armies_to_supply)
+                        self.game.place_armies(territory.id, armies_to_supply)
+                        armyReserves -= armies_to_supply
+                    else:
                         return
+
+        if armyReserves == 0:
+            return
 
         # Place our troops that border an enemy continent.
         enemyContinents = sorted(self.other.conqueredContinents, key=lambda x: x.continentBonus, reverse=True)
@@ -37,8 +57,8 @@ class JiaBot(AbstractBot):
             for territory in continent.territories:
                 for adjacentTerritory in territory.adjacentTerritories:
                     if adjacentTerritory in self.player.territories:
-                        print "Placing on territory {} with armies: {}".format(adjacentTerritory.id, int(self.player.armyReserves))
-                        self.game.place_armies(adjacentTerritory.id, int(self.player.armyReserves))
+                        print "Placing on territory {} with armies: {}".format(adjacentTerritory.id, armyReserves)
+                        self.game.place_armies(adjacentTerritory.id, armyReserves)
                         return
 
         # Find all of our territories that border an enemy territory
@@ -61,9 +81,7 @@ class JiaBot(AbstractBot):
                 borderTerritories[border] /= totalValues
         
         # Can use either.
-        reserves = status["num_reserves"]
-        # reserves = self.player.armyReserves
-        assert self.player.armyReserves == reserves
+        reserves = armyReserves
 
         placements = {}
         spilloverBorder = None
@@ -109,7 +127,7 @@ class JiaBot(AbstractBot):
                     attackingArmies = self.player.territories[attackingTerritory]
                     if attackingArmies > 2:
                         for adjacentTerritory in attackingTerritory.adjacentTerritories:
-                            if adjacentTerritory in self.other.territories:
+                            if adjacentTerritory in unconqueredTerritories:
                                 if self.command_attack(attackingTerritory, adjacentTerritory):
                                     flag = True
                                     continueFlag = False
@@ -149,7 +167,11 @@ class JiaBot(AbstractBot):
             self.other = Player(self.other.id, self.other.layout, self.player.state)
             if result["defender_territory_captured"]:
                 capturedTerritory = defendingTerritory
-                if attackingArmies > 2:
+                capturedTerritoryHasAdjacentEnemies = False
+                for adjacentTerritory in capturedTerritory.adjacentTerritories:
+                    if adjacentTerritory in self.other.territories:
+                        capturedTerritoryHasAdjacentEnemies = True
+                if attackingArmies > 2 and capturedTerritoryHasAdjacentEnemies:
                     print "Captured territory: Transfering army from territory {} to territory {} using armies {}".format(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                     self.game.transfer_armies(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)
                     self.player = self.player.transferArmy(attackingTerritory.id, defendingTerritory.id, attackingArmies - 2)

@@ -1,0 +1,3 @@
+Sort unconquered territories by least number of bordering enemy countries first. We want to supply the most armies there in the beginning, so that way we efficiently move our troups with attacks.
+
+We want to stop over-extending. Instead, we should only attack from a border to another country to prevent them from getting continent bonus.
