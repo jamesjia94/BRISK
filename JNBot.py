@@ -23,7 +23,7 @@ class JNBot(JiaBot):
             # print "calculating optimal paths : {}".format(end-start)
         # print "ALL PATHS: {}".format(all_paths)
         sorted_all_paths = sorted(all_paths, key= lambda p: self.calculate_path_value(p, self.player.armyReserves), reverse=True)
-        print "Sorted path: {}".format(sorted_all_paths)
+        # print "Sorted path: {}".format(sorted_all_paths)
         sorted_all_paths = [path for path in sorted_all_paths if len(path) > 1]
         filtered_all_paths = []
         visited_start = set()
@@ -61,7 +61,7 @@ class JNBot(JiaBot):
             curr_player = temp_player
             curr_other = temp_other
             i += 1
-        print "Path {} has value: {}".format(path, value)
+        # print "Path {} has value: {}".format(path, value)
         return value
 
     def calc_optimal_paths(self, border, num_armies_to_supply):
@@ -126,7 +126,7 @@ class JNBot(JiaBot):
         self.updatePlayerStates()
         optimal_paths = self.calc_attack_path()
         start = time.time()
-        print "optimal_paths to supply troops is {}".format(len(optimal_paths))
+        # print "optimal_paths to supply troops is {}".format(len(optimal_paths))
         self.supplyTroops(optimal_paths)
         end = time.time()
         # print "Supply troops: {}".format(end-start)
@@ -147,19 +147,20 @@ class JNBot(JiaBot):
                 print "Hit the limit of turns and lost"
             return
         # print "Attack troops: {}".format(end-start)
-        start = time.time()
-        try:
-            self.game.end_turn()
-        except Exception as e:
-            print e
-            end =  time.time()
-            print "Broken End turn: {}".format(end-start)
-            return
-        end =  time.time()
+        # start = time.time()
+        # try:
+        #     self.game.end_turn()
+        # except Exception as e:
+        #     print e
+        #     end =  time.time()
+        #     print "Broken End turn: {}".format(end-start)
+        #     return
+        # end =  time.time()
         # print "End turn: {}".format(end-start)
         turn_end = time.time()
+        
+        self.transferArmies()
         print "Overall turn took: {}".format(turn_end-turn_start)
-        # self.transferArmies()
 
 class Path(object):
     def __init__(self, path, required_armies):

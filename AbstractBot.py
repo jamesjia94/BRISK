@@ -42,19 +42,22 @@ class AbstractBot(object):
         # print self.layout
 
         while True:
-            status = self.wait_for_turn()
-            if status['eliminated']:
-                print "We lost"
-                break
-            if status['winner']:
-                if status['winner'] == self.game.player_id:
-                    print "We won"
-                    # TODO: Reward?
-                else:
-                    print "Hit the limit of turns and lost"
-                break
-            self.executeStrategy(status)
-            self.iterations += 1
+            try:
+                status = self.wait_for_turn()
+                if status['eliminated']:
+                    print "We lost"
+                    break
+                if status['winner']:
+                    if status['winner'] == self.game.player_id:
+                        print "We won"
+                        # TODO: Reward?
+                    else:
+                        print "Hit the limit of turns and lost"
+                    break
+                self.executeStrategy(status)
+                self.iterations += 1
+            except:
+                pass
 
     def executeStrategy(self, status):
         state = self.updatePlayerStates()
