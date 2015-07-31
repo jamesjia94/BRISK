@@ -92,7 +92,7 @@ class JNBot(JiaBot):
         for optimal_path_object in optimal_path_objects:
             if armies_left_to_supply <= 0:
                 return
-            needed_armies = optimal_path_object.get_required_armies()
+            needed_armies = int(math.ceil(optimal_path_object.get_required_armies() * 1.2))
             if needed_armies <= 0:
                 print "Path Object: {} needs 0 armies!!!!".format(optimal_path_object)
                 continue
