@@ -94,6 +94,7 @@ class JNBot(JiaBot):
 
     def executeStrategy(self, status):
         print "Starting turn"
+        turn_start = time.time()
         self.updatePlayerStates()
         optimal_paths = self.calc_attack_path()
         start = time.time()
@@ -116,6 +117,8 @@ class JNBot(JiaBot):
             return
         end =  time.time()
         print "End turn: {}".format(end-start)
+        turn_end = time.time()
+        print "Overall turn took: {}".format(turn_end-turn_start)
         # self.transferArmies()
 
 def main():
