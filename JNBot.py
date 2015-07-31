@@ -111,7 +111,8 @@ class JNBot(JiaBot):
         start = time.time()
         try:
             self.game.end_turn()
-        except:
+        except Exception as e:
+            print e
             end =  time.time()
             print "Broken End turn: {}".format(end-start)
             return

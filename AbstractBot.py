@@ -29,9 +29,10 @@ class AbstractBot(object):
         while True:
             status = self.game.get_player_status()
             if status['current_turn'] or status['eliminated'] or status['winner']:
+                print "Player status is : {}".format(status)
                 return status
             else:
-                time.sleep(0.1)
+                time.sleep(1)
 
     def run(self):
         print "starting game {} we are player {}".format(self.game.game_id, self.game.player_id)

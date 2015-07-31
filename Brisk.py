@@ -63,7 +63,11 @@ class Brisk(object):
         return self.get(self.url_game())
 
     def get_map_layout(self):
-        return self.get(self.url_game() + "?map=true")
+        start = time.time()
+        map_layout = self.get(self.url_game() + "?map=true")
+        end = time.time()
+        print "Get map layout time: {}".format(end-start)
+        return map_layout
 
     def get_player_status(self, lite=False):
         return self.get(self.url_player() + {False: "", True: "?check_turn=true"}[lite])
