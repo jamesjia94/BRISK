@@ -1,5 +1,6 @@
 import json
 import urllib2
+import time
 
 class Brisk(object):
     HOST = 'http://www.briskchallenge.com'
@@ -36,11 +37,14 @@ class Brisk(object):
     def post(self, url, data):
         req = urllib2.Request(url, json.dumps(data))
         try:
+            start = time.time()
             response = urllib2.urlopen(req)
         except Exception as ex:
             print ex
             raise
         res = response.read()
+        end = time.time()
+        print "Post time: {}".format(end-start)
         try:
             return json.loads(res)
         except ValueError:
@@ -53,6 +57,9 @@ class Brisk(object):
         return json.loads(response.read())
 
     def get_game_state(self):
+        start = time.time()
+        end = time.time()
+        print "Get Game state time: {}".format(end-start)
         return self.get(self.url_game())
 
     def get_map_layout(self):

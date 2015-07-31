@@ -63,10 +63,14 @@ class AbstractBot(object):
     def updatePlayerStates(self):
         start = time.time()
         state = self.game.get_game_state()
+        end = time.time()
+        print "Getting player state took: {}".format(end-start)
+
+        start = time.time()
         self.player = Player(self.playerID, self.layout, state)
         self.other = Player(self.otherID, self.layout, state)
         end = time.time()
-        print "Updating player state took: {}".format(end-start)
+        print "Updating players took: {}".format(end-start)
         return state
 
     def supplyTroops(self, status):
