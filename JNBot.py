@@ -11,6 +11,7 @@ from collections import Counter
 
 class JNBot(JiaBot):
     team_name = "NJ"
+
     def calc_attack_path(self):
         unconqueredContinents = sorted(self.player.unconqueredContinents.items(), key=lambda x: (len(x[1]["unconqueredTerritories"]),-x[0].continentBonus/len(x[0].borderTerritories)))
         # Loop over each continent
@@ -18,10 +19,22 @@ class JNBot(JiaBot):
         for continent,territoryDict in unconqueredContinents:
             unconqueredTerritories = territoryDict["unconqueredTerritories"]
             conqueredTerritories = territoryDict["conqueredTerritories"]
-            #set(conqueredTerritories) & set(continent.borderTerritories)
             return_paths += self.calc_optimal_paths(conqueredTerritories, conqueredTerritories, continent.borderTerritories, False)
             return_paths += self.calc_optimal_paths(conqueredTerritories, unconqueredTerritories, continent.borderTerritories, True)
-        return sorted(return_paths, key=lambda p: (p.goodness,p.armies_needed[0]))
+        optimal_paths= sorted(return_paths, key=lambda p: (-p.goodness,p.close_to_border, p.armies_needed[0]))
+        ends_seen=set()
+        # return optimal_paths
+        print "pre-filter paths are {}".format(len(optimal_paths))
+        filtered_paths=[]
+        for each_path in optimal_paths:
+            last_node_index = len(each_path.path)-1
+            last_node = each_path.path[last_node_index]
+            if not last_node in ends_seen:
+                filtered_paths.append(each_path)
+                ends_seen.add(last_node)
+        print "FILTERED OUT paths are {}".format(len(optimal_paths)-len(filtered_paths))
+        return filtered_paths
+
 
     def calc_optimal_paths(self, start_points, end_points, borders, is_transfer):
         # TODO: optimize by number of bordering enemy territories on end point
@@ -45,10 +58,15 @@ class JNBot(JiaBot):
                 # Calc needed armies for each path
                 for path in all_paths:
                     if not is_transfer:
-                        path.pop()
+                        path.pop() # Remove last one
                     start_army = self.calc_start_armies(path)
                     end_army = start_army - (len(path)-1)*2 
-                    path = Path(path, range(start_army, end_army, -2), is_transfer, closeness_to_border)
+                    start_armies = range(start_army, end_army, -2)
+                    for step in xrange(1, len(path)-1):
+                        enemy = self.other.territories[path[step]]
+                        start_armies[step] = start_armies[step]- enemy
+                    goodness = self.calc_heuristic(closeness_to_border, start_armies, start_point)
+                    path = Path(path, is_transfer, start_armies, closeness_to_border, goodness)
                     paths_through.append(path)
                     
         return paths_through
@@ -58,8 +76,17 @@ class JNBot(JiaBot):
         enemies = 0
         for i in xrange(1, len(path)):
             enemies += self.other.territories[path[i]]
-        return enemies + steps*2
+        return enemies + int(math.ceil(steps*1.5))
 
+    def calc_heuristic(self, close_to_border, start_armies, start_point):
+        # close_to_border = minimize
+        # start_army  = minimize
+        # close_to_conquer_continent = maximize
+        current_continent = start_point.continent
+        enemies_left_in_continent = reduce(lambda cumulative, territory: cumulative + self.other.territories[territory], self.player.unconqueredContinents[current_continent]["unconqueredTerritories"],0)
+        continent_heur = current_continent.continentBonus/enemies_left_in_continent
+        bonus_per_terr = current_continent.continentBonus/len(current_continent.territories)
+        return continent_heur + bonus_per_terr*(len(start_armies)-1)
 
     def supplyTroops(self, optimal_paths):
         armyReserves = self.player.armyReserves
@@ -68,9 +95,8 @@ class JNBot(JiaBot):
                 return
             territory = path_obj.path[0]
             num_armies_in_start = self.player.territories[territory]
-            print "Territory {} needs {} armies".format(territory.id, path_obj.armies_needed[0])
             num_armies_to_supply = min(path_obj.armies_needed[0] - num_armies_in_start, armyReserves)
-            if num_armies_to_supply > 0:
+            if num_armies_to_supply > 0 and num_armies_to_supply + num_armies_in_start >= path_obj.armies_needed[0]:
                 print "optimal path is: {}".format(path_obj)
                 print "Supplying troops to territory {} with {} armies".format(territory.id, num_armies_to_supply)
                 self.game.place_armies(territory.id, num_armies_to_supply)
@@ -87,6 +113,7 @@ class JNBot(JiaBot):
     def attackTroops(self, optimal_paths):
         for path_obj in optimal_paths:
             i = 0
+            # print "path_obj: {}".format(path_obj)
             while i < len(path_obj.path)-1:
                 # start = time.time()
                 attacking_territory_obj = path_obj.path[i]
@@ -99,13 +126,14 @@ class JNBot(JiaBot):
                         # print "Attack iteration 1 took: {}".format(end-start)
                         continue
                     start = time.time()
+                    print "most optimal path is {}".format(path_obj)
                     capturedTerritory = self.command_attack(attacking_territory_obj, next_territory_in_path)
                     end = time.time()
                     print "Attack took: {}".format(end-start)
                     if capturedTerritory:
                         i += 1
                         end = time.time()
-                        # print "Attack iteration 2 took: {}".format(end-start)
+                        print "capturedTerritory is {}".format(capturedTerritory)
                     else:
                         end = time.time()
                         # print "Attack iteration 3 took: {}".format(end-start)
@@ -120,11 +148,13 @@ class JNBot(JiaBot):
         self.updatePlayerStates()
         optimal_paths = self.calc_attack_path()
         start = time.time()
+        print "optimal_paths to supply troops is {}".format(len(optimal_paths))
         self.supplyTroops(optimal_paths)
         end = time.time()
         print "Supply troops: {}".format(end-start)
         self.updatePlayerStates()
         start = time.time()
+
         self.attackTroops(optimal_paths)
         end = time.time()
         print "Attack troops: {}".format(end-start)
@@ -135,10 +165,11 @@ class JNBot(JiaBot):
         # self.transferArmies()
 
 class Path(object):
-    def __init__(self, path, armies_needed, need_transfer, goodness):
+    def __init__(self, path, need_transfer, armies_needed, close_to_border, goodness):
         self.path = path
         self.armies_needed = armies_needed
         self.transfer = need_transfer
+        self.close_to_border = close_to_border
         self.goodness = goodness
 
     def __repr__(self):
