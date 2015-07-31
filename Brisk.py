@@ -6,6 +6,7 @@ class Brisk(object):
     HOST = 'http://www.briskchallenge.com'
 
     def __init__(self, game_id=None, name=None, token=None):
+        token = "468c2a5e7f390e846cd62587a45951b1689ca345"
         res = self.join_game(game_id, name, token)
         self.game_id = res['game']
         self.player_id = res['player']

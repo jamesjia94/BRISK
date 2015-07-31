@@ -1,5 +1,10 @@
 import time
+import copy
+
 class Player(object):
+    def getCopy(self):
+        return Player(self.id, self.layout, copy.deepcopy(self.state))
+
     def __init__(self, id, layout, state):
         self.id = id
         self.layout = layout
@@ -70,7 +75,7 @@ class Player(object):
         capturedDefenderTerritory = int(result["defender_territory_captured"])
         attackerArmyLeft = int(result["attacker_territory_armies_left"])
         defenderArmyLeft = int(result["defender_territory_armies_left"])
-        newState = self.state
+        newState = copy.deepcopy(self.state)
         newTerritories = []
         for territory in self.state["territories"]:
             newTerritory = territory.copy()
@@ -85,7 +90,7 @@ class Player(object):
         return Player(self.id, self.layout, newState)
 
     def transferArmy(self, src, dst, numTransfer):
-        newState = self.state
+        newState = copy.deepcopy(self.state)
         newTerritories = []
         for territory in self.state["territories"]:
             newTerritory = territory.copy()

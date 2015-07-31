@@ -9,9 +9,10 @@ import random
 import math
 from collections import deque
 from collections import Counter
+import copy
 
 class JNBot(JiaBot):
-    team_name = "Compute+Data"
+    team_name = "Data+Compute"
     
     def calc_attack_path(self):
         all_paths = []
@@ -20,7 +21,7 @@ class JNBot(JiaBot):
             all_paths += self.calc_optimal_paths(border, self.player.armyReserves)
             end = time.time()
             # print "calculating optimal paths : {}".format(end-start)
-        print "ALL PATHS: {}".format(all_paths)
+        # print "ALL PATHS: {}".format(all_paths)
         sorted_all_paths = sorted(all_paths, key= lambda p: self.calculate_path_value(p, self.player.armyReserves), reverse=True)
         print "Sorted path: {}".format(sorted_all_paths)
         sorted_all_paths = [path for path in sorted_all_paths if len(path) > 1]
@@ -40,9 +41,9 @@ class JNBot(JiaBot):
     # TODO: include enemy losing territory as part of heuristic
     def calculate_path_value(self, path, num_armies_to_supply):
         armies_left = num_armies_to_supply + self.player.territories[path[0]]
-        value = 0
-        curr_player = self.player
-        curr_other = self.other
+        value = 0.0
+        curr_player = self.player.getCopy()
+        curr_other = self.other.getCopy()
         i = 0
         while i < len(path) - 1:
             attacker_territory = path[i]
@@ -56,10 +57,11 @@ class JNBot(JiaBot):
 
             temp_player = curr_player.attackResult(fakeResult)
             temp_other = Player(curr_other.id, curr_other.layout, temp_player.state)
-            value += win_prob * (temp_player.armyReserves - curr_player.armyReserves + (curr_other.armyReserves - temp_other.armyReserves))
+            value += win_prob * (temp_player.armyReserves - curr_player.armyReserves + 1.2*(curr_other.armyReserves - temp_other.armyReserves))
             curr_player = temp_player
             curr_other = temp_other
             i += 1
+        print "Path {} has value: {}".format(path, value)
         return value
 
     def calc_optimal_paths(self, border, num_armies_to_supply):
