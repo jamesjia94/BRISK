@@ -12,6 +12,8 @@ from collections import Counter
 
 class JNBot(JiaBot):
     team_name = "JN"
+    # off by 1 because attacker is each row and starts with 1, defender is also off by 1
+    ATTACK_PROB = [[0.417,0.106,0.027,0.007,0.002,0.000,0.000,0.000,0.000,0.000],[0.754,0.363,0.206,0.091,0.049,0.021,0.011,0.005,0.003,0.001],[0.916,0.656,0.470,0.315,0.206,0.134,0.084,0.054,0.033,0.021],[0.972,0.785,0.642,0.477,0.359,0.253,0.181,0.123,0.086,0.057],[0.990,0.890,0.769,0.638,0.506,0.397,0.297,0.224,0.162,0.118],[0.997,0.934,0.857,0.745,0.638,0.521,0.423,0.329,0.258,0.193],[0.999,0.967,0.910,0.834,0.736,0.640,0.536,0.446,0.357,0.287],[1.000,0.980,0.947,0.888,0.818,0.730,0.643,0.547,0.464,0.380],[1.000,0.990,0.967,0.930,0.873,0.808,0.726,0.646,0.558,0.480],[1.000,0.994,0.981,0.954,0.916,0.861,0.800,0.724,0.650,0.568]]
 
     def calc_attack_path(self):
         all_paths = []
@@ -34,12 +36,13 @@ class JNBot(JiaBot):
             attacker_territory = path[i]
             defender_territory = path[i+1]
             defender_armies = self.other.territories[defender_territory]
+            win_prob = JNBot.ATTACK_PROB[max(9,min(0,armies_left-1))][max(9,min(0,defender_armies-1))]
             armies_left -= (defender_armies + 1)
             fakeResult = {"attacker_territory": attacker_territory.id, "defender_territory": defender_territory.id, "defender_territory_captured": True, "attacker_territory_armies_left": 1, "defender_territory_armies_left": armies_left}
 
             temp_player = curr_player.attackResult(fakeResult)
             temp_other = Player(curr_other.id, curr_other.layout, temp_player.state)
-            value += armies_left * (temp_player.armyReserves - curr_player.armyReserves + (curr_other.armyReserves - temp_other.armyReserves))
+            value += win_prob * (temp_player.armyReserves - curr_player.armyReserves + (curr_other.armyReserves - temp_other.armyReserves))
             curr_player = temp_player
             curr_other = temp_other
             i += 1
