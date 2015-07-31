@@ -27,6 +27,7 @@ class JiaBot(AbstractBot):
                 break
 
             # If an enemy territory borders two allied territories, only supply to one allied territory.
+            # Sort start points by number of territories that are on a path.
             markedEnemyTerritories = set()
             for territory in conqueredTerritories:
                 num_armies_in_territory = self.player.territories[territory]
