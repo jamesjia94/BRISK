@@ -11,10 +11,10 @@ from collections import Counter
 import traceback
 
 class JiaBot(AbstractBot):
-    team_name = "Ign"
+    team_name = "Data+Compute"
     supply_threshold = 0.1
 
-    def supplyTroops(self, status):
+    def supplyTroops(self, status, iterations):
         print "Supply Phase"
         # Place our troops to conqueredContinents a continent.
         armyReserves = self.player.armyReserves
@@ -39,6 +39,8 @@ class JiaBot(AbstractBot):
                         markedEnemyTerritories.add(adjacentTerritory)
 
                 armies_to_supply = max(int(math.ceil(num_enemy_armies_bordering*1.5)), max_neighboring_army*2) - num_armies_in_territory
+                # if self.iterations == 0:
+                #     armies_to_supply = 1
                 if armies_to_supply > 0:
                     if armyReserves > 0:
                         armies_to_supply = min(armies_to_supply, armyReserves)
@@ -150,7 +152,7 @@ class JiaBot(AbstractBot):
                 if adjacentTerritory in self.other.territories:
                     capturedTerritory = self.command_attack(curr_territory, adjacentTerritory)
                     if capturedTerritory:
-                        borderTerritories.append(capturedTerritory)
+                        borderTerritories.insert(0,capturedTerritory)
         end = time.time()
         print "Attack phase took: {}".format(end-start)
 

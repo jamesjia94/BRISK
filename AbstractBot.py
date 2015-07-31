@@ -19,6 +19,7 @@ class AbstractBot(object):
         self.otherID = 2 if self.playerID == 1 else 1
         self.player = None
         self.other = None
+        self.iterations = 0
 
     def getMapLayout(self):
         self.layout = BriskMap(self.game.get_map_layout())
@@ -50,10 +51,11 @@ class AbstractBot(object):
                     print "Hit the limit of turns and lost"
                 break
             self.executeStrategy(status)
+            self.iterations += 1
 
     def executeStrategy(self, status):
         state = self.updatePlayerStates()
-        self.supplyTroops(status)
+        self.supplyTroops(status, self.iterations)
         self.updatePlayerStates()
         self.attack()
         self.transferArmies()
