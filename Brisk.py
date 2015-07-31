@@ -16,7 +16,7 @@ class Brisk(object):
         return cls.HOST + "/v1/brisk/game"
 
     def join_game(self, game_id, name, token):
-        data = {'join': True, 'team_name': name}
+        data = {'join': True, 'team_name': name, 'b': 2}
         if game_id is not None:
             if game_id: #game_id is not 0
                 data['game'] = game_id

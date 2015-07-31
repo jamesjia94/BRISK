@@ -11,7 +11,7 @@ from collections import deque
 from collections import Counter
 
 class JNBot(JiaBot):
-    team_name = "JJ"
+    team_name = "Compute+Data"
     
     def calc_attack_path(self):
         all_paths = []
@@ -19,8 +19,10 @@ class JNBot(JiaBot):
             start = time.time()
             all_paths += self.calc_optimal_paths(border, self.player.armyReserves)
             end = time.time()
-            print "calculating optimal paths : {}".format(end-start)
+            # print "calculating optimal paths : {}".format(end-start)
+        print "ALL PATHS: {}".format(all_paths)
         sorted_all_paths = sorted(all_paths, key= lambda p: self.calculate_path_value(p, self.player.armyReserves), reverse=True)
+        print "Sorted path: {}".format(sorted_all_paths)
         sorted_all_paths = [path for path in sorted_all_paths if len(path) > 1]
         filtered_all_paths = []
         visited_start = set()
@@ -31,7 +33,7 @@ class JNBot(JiaBot):
                 filtered_all_paths.append(path)
         sorted_all_path_objects = []
         for path in filtered_all_paths:
-            required_armies = reduce(lambda cumulative, t: cumulative + self.other.territories[t], path[1:], 0)
+            required_armies = reduce(lambda cumulative, t: cumulative + self.other.territories[t]+2, path[1:], 2)
             sorted_all_path_objects.append(Path(path, required_armies))
         return sorted_all_path_objects
 
@@ -46,7 +48,9 @@ class JNBot(JiaBot):
             attacker_territory = path[i]
             defender_territory = path[i+1]
             defender_armies = self.other.territories[defender_territory]
-            win_prob = self.ATTACK_PROB[min(9,max(0,armies_left-1))][min(9,max(0,defender_armies-1))]
+
+            win_prob = self.get_attack_probability(armies_left-1,defender_armies-1)
+
             armies_left -= (defender_armies + 1)
             fakeResult = {"attacker_territory": attacker_territory.id, "defender_territory": defender_territory.id, "defender_territory_captured": True, "attacker_territory_armies_left": 1, "defender_territory_armies_left": armies_left}
 
@@ -67,24 +71,20 @@ class JNBot(JiaBot):
             tmp_path = q.popleft()
             last_node = tmp_path[len(tmp_path)-1]
             # print tmp_path
-            if last_node in self.player.territories and len(tmp_path) > 1:
-                x = tmp_path.pop()
-                if tmp_path:
-                    all_paths.append(tmp_path)
-                continue
 
-            needed_armies = reduce(lambda cumulative, territory: cumulative + self.other.territories[territory], tmp_path[1:],0)
-            if needed_armies + len(tmp_path)-1 >= self.player.territories[border] + num_armies_to_supply:
-                tmp_path.pop()
-                if tmp_path:
-                    all_paths.append(tmp_path)
-                continue
-
+            keepRecursing = False
             for link_node in last_node.adjacentTerritories:
-                if link_node not in tmp_path:
+                if link_node not in tmp_path and link_node not in self.player.territories:
                     new_path = []
                     new_path = tmp_path + [link_node]
-                    q.append(new_path)
+                    needed_armies = reduce(lambda cumulative, territory: cumulative + self.other.territories[territory], new_path[1:],0)
+                    if needed_armies + len(new_path)-1 < self.player.territories[border] + num_armies_to_supply:
+                        q.append(new_path)
+                        keepRecursing = True
+            if not keepRecursing:
+                if len(tmp_path) > 1:
+                    all_paths.append(tmp_path)
+
         return all_paths
 
     def supplyTroops(self, optimal_path_objects):
@@ -133,6 +133,17 @@ class JNBot(JiaBot):
 
         self.attackTroops(optimal_paths)
         end = time.time()
+        status = self.game.get_player_status()
+        if status['eliminated']:
+            print "We lost"
+            return
+        if status['winner']:
+            if status['winner'] == self.game.player_id:
+                print "We won"
+                # TODO: Reward?
+            else:
+                print "Hit the limit of turns and lost"
+            return
         # print "Attack troops: {}".format(end-start)
         start = time.time()
         try:

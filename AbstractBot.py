@@ -87,3 +87,11 @@ class AbstractBot(object):
         if state["winner"]:
             return
         self.game.end_turn()
+
+    def get_attack_probability(self, attack, defend):
+        attacking_num = attack
+        defending_num = defend
+        while attacking_num > 9 or defending_num > 9:
+            attacking_num -= 1
+            defending_num -= 1
+        return self.ATTACK_PROB[max(0,attacking_num)][max(0,defending_num)]
