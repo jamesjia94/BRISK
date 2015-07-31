@@ -44,7 +44,7 @@ class Brisk(object):
             raise
         res = response.read()
         end = time.time()
-        print "Post time: {}".format(end-start)
+        # print "Post time: {}".format(end-start)
         try:
             return json.loads(res)
         except ValueError:
@@ -59,14 +59,14 @@ class Brisk(object):
     def get_game_state(self):
         start = time.time()
         end = time.time()
-        print "Get Game state time: {}".format(end-start)
+        # print "Get Game state time: {}".format(end-start)
         return self.get(self.url_game())
 
     def get_map_layout(self):
         start = time.time()
         map_layout = self.get(self.url_game() + "?map=true")
         end = time.time()
-        print "Get map layout time: {}".format(end-start)
+        # print "Get map layout time: {}".format(end-start)
         return map_layout
 
     def get_player_status(self, lite=False):

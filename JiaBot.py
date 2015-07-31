@@ -160,7 +160,12 @@ class JiaBot(AbstractBot):
         capturedTerritory = None
         attackingArmies = self.player.territories[attackingTerritory]
         defendingArmies = self.other.territories[defendingTerritory]
-        while attackingArmies > defendingArmies or attackingArmies >= 3:
+        
+        while True:
+            attacking = min(9, max(0, attackingArmies))
+            defending = min(9, max(0, defendingArmies))
+            if self.ATTACK_PROB[attacking-1][defending-1] <= 0.5:
+                break
             print "attacking: {} from {} with {} armies".format(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             result = self.game.attack(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             attackingArmies = result["attacker_territory_armies_left"]

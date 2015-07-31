@@ -11,10 +11,8 @@ from collections import deque
 from collections import Counter
 
 class JNBot(JiaBot):
-    team_name = "JN"
-    # off by 1 because attacker is each row and starts with 1, defender is also off by 1
-    ATTACK_PROB = [[0.417,0.106,0.027,0.007,0.002,0.000,0.000,0.000,0.000,0.000],[0.754,0.363,0.206,0.091,0.049,0.021,0.011,0.005,0.003,0.001],[0.916,0.656,0.470,0.315,0.206,0.134,0.084,0.054,0.033,0.021],[0.972,0.785,0.642,0.477,0.359,0.253,0.181,0.123,0.086,0.057],[0.990,0.890,0.769,0.638,0.506,0.397,0.297,0.224,0.162,0.118],[0.997,0.934,0.857,0.745,0.638,0.521,0.423,0.329,0.258,0.193],[0.999,0.967,0.910,0.834,0.736,0.640,0.536,0.446,0.357,0.287],[1.000,0.980,0.947,0.888,0.818,0.730,0.643,0.547,0.464,0.380],[1.000,0.990,0.967,0.930,0.873,0.808,0.726,0.646,0.558,0.480],[1.000,0.994,0.981,0.954,0.916,0.861,0.800,0.724,0.650,0.568]]
-
+    team_name = "JJ"
+    
     def calc_attack_path(self):
         all_paths = []
         for border in self.player.borderTerritories:
@@ -23,7 +21,19 @@ class JNBot(JiaBot):
             end = time.time()
             print "calculating optimal paths : {}".format(end-start)
         sorted_all_paths = sorted(all_paths, key= lambda p: self.calculate_path_value(p, self.player.armyReserves), reverse=True)
-        return sorted_all_paths
+        sorted_all_paths = [path for path in sorted_all_paths if len(path) > 1]
+        filtered_all_paths = []
+        visited_start = set()
+        for path in sorted_all_paths:
+            start_territory = path[0]
+            if start_territory not in visited_start:
+                visited_start.add(start_territory)
+                filtered_all_paths.append(path)
+        sorted_all_path_objects = []
+        for path in filtered_all_paths:
+            required_armies = reduce(lambda cumulative, t: cumulative + self.other.territories[t], path[1:], 0)
+            sorted_all_path_objects.append(Path(path, required_armies))
+        return sorted_all_path_objects
 
     # TODO: include enemy losing territory as part of heuristic
     def calculate_path_value(self, path, num_armies_to_supply):
@@ -36,7 +46,7 @@ class JNBot(JiaBot):
             attacker_territory = path[i]
             defender_territory = path[i+1]
             defender_armies = self.other.territories[defender_territory]
-            win_prob = JNBot.ATTACK_PROB[max(9,min(0,armies_left-1))][max(9,min(0,defender_armies-1))]
+            win_prob = self.ATTACK_PROB[min(9,max(0,armies_left-1))][min(9,max(0,defender_armies-1))]
             armies_left -= (defender_armies + 1)
             fakeResult = {"attacker_territory": attacker_territory.id, "defender_territory": defender_territory.id, "defender_territory_captured": True, "attacker_territory_armies_left": 1, "defender_territory_armies_left": armies_left}
 
@@ -77,23 +87,36 @@ class JNBot(JiaBot):
                     q.append(new_path)
         return all_paths
 
-    def supplyTroops(self, optimal_paths):
-        optimal_path = optimal_paths[0]
-        start_territory = optimal_path[0]
-        self.game.place_armies(start_territory.id, self.player.armyReserves)
+    def supplyTroops(self, optimal_path_objects):
+        armies_left_to_supply = self.player.armyReserves
+        for optimal_path_object in optimal_path_objects:
+            if armies_left_to_supply <= 0:
+                return
+            needed_armies = optimal_path_object.get_required_armies()
+            if needed_armies <= 0:
+                print "Path Object: {} needs 0 armies!!!!".format(optimal_path_object)
+                continue
+            supplied_armies = min(armies_left_to_supply, needed_armies)
+            armies_left_to_supply -= supplied_armies
+            print "Supply troops to: {} with {} armies".format(optimal_path_object.path[0], supplied_armies)
+            self.game.place_armies(optimal_path_object.path[0].id, supplied_armies)
     
-    def attackTroops(self, optimal_paths):
-        optimal_path = optimal_paths[0]
-        i = 0
-        while i < len(optimal_path) - 1:
-            attacking_territory_obj = optimal_path[i]
-            curr_territory_num_armies = self.player.territories[attacking_territory_obj]
-            next_territory_in_path = optimal_path[i+1]
-            capturedTerritory = self.command_attack(attacking_territory_obj, next_territory_in_path)
-            if capturedTerritory:
-                i += 1
-            else:
-                break
+    def attackTroops(self, optimal_path_objects):
+        for optimal_path_object in optimal_path_objects:
+            optimal_path = optimal_path_object.get_path()
+            i = 0
+            while i < len(optimal_path) - 1:
+                attacking_territory_obj = optimal_path[i]
+                curr_territory_num_armies = self.player.territories[attacking_territory_obj]
+                next_territory_in_path = optimal_path[i+1]
+                if next_territory_in_path in self.player.territories:
+                    i += 1
+                    continue
+                capturedTerritory = self.command_attack(attacking_territory_obj, next_territory_in_path)
+                if capturedTerritory:
+                    i += 1
+                else:
+                    break
 
     def executeStrategy(self, status):
         print "Starting turn"
@@ -104,13 +127,13 @@ class JNBot(JiaBot):
         print "optimal_paths to supply troops is {}".format(len(optimal_paths))
         self.supplyTroops(optimal_paths)
         end = time.time()
-        print "Supply troops: {}".format(end-start)
+        # print "Supply troops: {}".format(end-start)
         self.updatePlayerStates()
         start = time.time()
 
         self.attackTroops(optimal_paths)
         end = time.time()
-        print "Attack troops: {}".format(end-start)
+        # print "Attack troops: {}".format(end-start)
         start = time.time()
         try:
             self.game.end_turn()
@@ -120,10 +143,24 @@ class JNBot(JiaBot):
             print "Broken End turn: {}".format(end-start)
             return
         end =  time.time()
-        print "End turn: {}".format(end-start)
+        # print "End turn: {}".format(end-start)
         turn_end = time.time()
         print "Overall turn took: {}".format(turn_end-turn_start)
         # self.transferArmies()
+
+class Path(object):
+    def __init__(self, path, required_armies):
+        self.path = path
+        self.required_armies = required_armies
+
+    def get_path(self):
+        return self.path
+
+    def get_required_armies(self):
+        return self.required_armies
+
+    def __repr__(self):
+        return "Path: {}. Required armies: {}".format(self.path, self.required_armies)
 
 def main():
     parser = argparse.ArgumentParser()

@@ -19,7 +19,7 @@ class Player(object):
                 territoryObj = self.layout.getTerritoryByID(territory["territory"])
                 self.territories[territoryObj] = territory["num_armies"]
         end = time.time()
-        print "Updating self.territories took {}".format(end-start)
+        # print "Updating self.territories took {}".format(end-start)
         # Update border territories
         start = time.time()
         for territory in self.state["territories"]:
@@ -29,17 +29,17 @@ class Player(object):
                     if adjTerritory not in self.territories:
                         self.borderTerritories.add(territoryObj)
         end = time.time()
-        print "Updating border territories took {}".format(end-start)
+        # print "Updating border territories took {}".format(end-start)
 
         start = time.time()
         self.updateCountries()
         end = time.time()
-        print "Updating countries took {}".format(end-start)
+        # print "Updating countries took {}".format(end-start)
 
         start = time.time()
         self.updateArmyReserves()
         end = time.time()
-        print "Updating army reserves took {}".format(end-start)
+        # print "Updating army reserves took {}".format(end-start)
 
     def __repr__(self):
         borderTerritories = [str(territory) for territory in self.borderTerritories]
