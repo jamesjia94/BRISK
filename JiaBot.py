@@ -128,13 +128,12 @@ class JiaBot(AbstractBot):
                 continueFlag = True
                 for attackingTerritory in conqueredTerritories:
                     attackingArmies = self.player.territories[attackingTerritory]
-                    if attackingArmies > 2:
-                        for adjacentTerritory in attackingTerritory.adjacentTerritories:
-                            if adjacentTerritory in unconqueredTerritories:
-                                if self.command_attack(attackingTerritory, adjacentTerritory):
-                                    flag = True
-                                    continueFlag = False
-                                    break
+                    for adjacentTerritory in attackingTerritory.adjacentTerritories:
+                        if adjacentTerritory in unconqueredTerritories:
+                            if self.command_attack(attackingTerritory, adjacentTerritory):
+                                flag = True
+                                continueFlag = False
+                                break
                     if not continueFlag:
                         break
                 if not continueFlag:
@@ -161,7 +160,7 @@ class JiaBot(AbstractBot):
         capturedTerritory = None
         attackingArmies = self.player.territories[attackingTerritory]
         defendingArmies = self.other.territories[defendingTerritory]
-        while attackingArmies > defendingArmies and attackingArmies > 2:
+        while attackingArmies > defendingArmies or attackingArmies >= 3:
             print "attacking: {} from {} with {} armies".format(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             result = self.game.attack(attackingTerritory.id, defendingTerritory.id, min(3, attackingArmies-1))
             attackingArmies = result["attacker_territory_armies_left"]
